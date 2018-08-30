@@ -1,6 +1,6 @@
 id: celltrails
-docker_repository: dynverse/dynmethods:celltrails
-container_url: https://github.com/dynverse/dynmethods/tree/master/containers/celltrails
+docker_repository: dynverse/ti_celltrails
+container_url: https://github.com/dynverse/ti_celltrails
 name: CellTrails
 type: algorithm
 platform: R
