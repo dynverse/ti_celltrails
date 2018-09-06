@@ -1,6 +1,7 @@
 id: celltrails
 docker_repository: dynverse/ti_celltrails
 container_url: https://github.com/dynverse/ti_celltrails
+singularity_collection: 1536
 name: CellTrails
 type: algorithm
 platform: R
