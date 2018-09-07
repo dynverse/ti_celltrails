@@ -91,10 +91,7 @@ trajectory_types:
 - bifurcation
 - convergence
 - multifurcation
-- binary_tree
 - tree
-- graph
-- disconnected_graph
 topology_inference: free
 authors:
 - given: Daniel
