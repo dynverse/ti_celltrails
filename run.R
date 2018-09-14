@@ -35,6 +35,9 @@ trajFeatureNames(sce) <- filterTrajFeaturesByDL(sce, threshold = params$threshol
 trajFeatureNames(sce) <- filterTrajFeaturesByCOV(sce, threshold = params$threshold_cov, show_plot = FALSE)
 trajFeatureNames(sce) <- filterTrajFeaturesByFF(sce, threshold = params$threshold_ff, min_expr = params$min_expr, show_plot = FALSE)
 
+# filter cells based on the features
+sce <- sce[,apply(logcounts(sce[trajFeatureNames(sce), ]), 2, sd) > 0]
+
 # dimensionality reduction
 se <- CellTrails::embedSamples(sce)
 d <- CellTrails::findSpectrum(se$eigenvalues, frac = params$frac)
