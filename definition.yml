@@ -6,6 +6,10 @@ name: CellTrails
 type: algorithm
 platform: R
 parameters:
+  filter_features:
+    type: logical
+    default: false
+    description: Whether to include celltrails feature filtering
   threshold_dl:
     description: Minimum number of samples; if value < 1 it is interpreted as fraction,
       otherwise as absolute sample count
