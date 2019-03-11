@@ -1,8 +1,7 @@
-FROM dynverse/dynwrap:bioc
+FROM dynverse/dynwrapr:v0.1.0
 
 RUN R -e 'devtools::install_github("dcellwanger/CellTrails")'
 
-LABEL version 0.1.6
+COPY definition.yml run.R example.R /code/
 
-ADD . /code
-ENTRYPOINT Rscript /code/run.R
+ENTRYPOINT ["/code/run.R"]
