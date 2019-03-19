@@ -14,7 +14,7 @@ library(CellTrails, warn.conflicts = FALSE)
 
 # load data
 expression <- task$expression %>% as.matrix()
-params <- task$params
+parameters <- task$parameters
 priors <- task$priors
 
 # TIMING: done with preproc
@@ -28,10 +28,10 @@ timings <- list(method_afterpreproc = Sys.time())
 sce <- SingleCellExperiment(assays = list(logcounts = t(expression)))
 
 # filter features
-if (isTRUE(params$filter_features)) {
-  trajFeatureNames(sce) <- filterTrajFeaturesByDL(sce, threshold = params$threshold_dl, show_plot = FALSE)
-  trajFeatureNames(sce) <- filterTrajFeaturesByCOV(sce, threshold = params$threshold_cov, show_plot = FALSE)
-  trajFeatureNames(sce) <- filterTrajFeaturesByFF(sce, threshold = params$threshold_ff, min_expr = params$min_expr, show_plot = FALSE)
+if (isTRUE(parameters$filter_features)) {
+  trajFeatureNames(sce) <- filterTrajFeaturesByDL(sce, threshold = parameters$threshold_dl, show_plot = FALSE)
+  trajFeatureNames(sce) <- filterTrajFeaturesByCOV(sce, threshold = parameters$threshold_cov, show_plot = FALSE)
+  trajFeatureNames(sce) <- filterTrajFeaturesByFF(sce, threshold = parameters$threshold_ff, min_expr = parameters$min_expr, show_plot = FALSE)
 }
 
 # filter cells based on the features
@@ -39,19 +39,19 @@ sce <- sce[,apply(logcounts(sce[trajFeatureNames(sce), ]), 2, sd) > 0]
 
 # dimensionality reduction
 se <- CellTrails::embedSamples(sce)
-d <- CellTrails::findSpectrum(se$eigenvalues, frac = params$frac)
+d <- CellTrails::findSpectrum(se$eigenvalues, frac = parameters$frac)
 CellTrails::latentSpace(sce) <- se$components[, d]
 
 # find states
 CellTrails::states(sce) <- sce %>% CellTrails::findStates(
-  min_size = params$min_size,
-  min_feat = params$min_feat,
-  max_pval = params$max_pval,
-  min_fc = params$min_fc
+  min_size = parameters$min_size,
+  min_feat = parameters$min_feat,
+  max_pval = parameters$max_pval,
+  min_fc = parameters$min_fc
 )
 
 # construct tree
-sce <- CellTrails::connectStates(sce, l = params$l)
+sce <- CellTrails::connectStates(sce, l = parameters$l)
 
 # fit trajectory
 # this object can contain multiple trajectories (= "components"), so we have to extract information for every one of them and combine afterwards
