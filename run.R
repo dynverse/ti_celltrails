@@ -25,7 +25,7 @@ timings <- list(method_afterpreproc = Sys.time())
 #####################################
 # steps from the vignette https://dcellwanger.github.io/CellTrails/
 
-sce <- SingleCellExperiment(assays = list(logcounts = t(expression)))
+sce <- SingleCellExperiment(assays = list(logcounts = Matrix::t(expression)))
 
 # filter features
 if (isTRUE(parameters$filter_features)) {
