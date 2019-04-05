@@ -1,40 +1,37 @@
-library(dplyr)
-library(purrr)
-library(readr)
-library(tibble)
-library(igraph)
+#!/usr/local/bin/Rscript
 
-library(CellTrails)
+task <- dyncli::main()
 
-checkpoints <- list()
+library(dplyr, warn.conflicts = FALSE)
+library(purrr, warn.conflicts = FALSE)
+library(dynwrap, warn.conflicts = FALSE)
+library(dyncli, warn.conflicts = FALSE)
+library(CellTrails, warn.conflicts = FALSE)
 
-#   ____________________________________________________________________________
-#   Load data                                                               ####
+#####################################
+###           LOAD DATA           ###
+#####################################
 
-data <- read_rds("/ti/input/data.rds")
-params <- jsonlite::read_json("/ti/input/params.json")
+# load data
+expression <- task$expression %>% as.matrix()
+parameters <- task$parameters
+priors <- task$priors
 
-#' @examples
-#' data <- dyntoy::generate_dataset(id = "test", num_cells = 500, num_features = 300, model = "binary_tree") %>% c(., .$prior_information)
-#' params <- yaml::read_yaml("containers/celltrails/definition.yml")$parameters %>%
-#'   {.[names(.) != "forbidden"]} %>%
-#'   map(~ .$default)
+# TIMING: done with preproc
+timings <- list(method_afterpreproc = Sys.time())
 
-expression <- data$expression
-
-checkpoints$method_afterpreproc <- as.numeric(Sys.time())
-
-#   ____________________________________________________________________________
-#   Infer trajectory                                                        ####
+#####################################
+###        INFER TRAJECTORY       ###
+#####################################
 # steps from the vignette https://dcellwanger.github.io/CellTrails/
 
-sce <- SingleCellExperiment(assays = list(logcounts = t(expression)))
+sce <- SingleCellExperiment(assays = list(logcounts = Matrix::t(expression)))
 
 # filter features
-if (isTRUE(params$filter_features)) {
-  trajFeatureNames(sce) <- filterTrajFeaturesByDL(sce, threshold = params$threshold_dl, show_plot = FALSE)
-  trajFeatureNames(sce) <- filterTrajFeaturesByCOV(sce, threshold = params$threshold_cov, show_plot = FALSE)
-  trajFeatureNames(sce) <- filterTrajFeaturesByFF(sce, threshold = params$threshold_ff, min_expr = params$min_expr, show_plot = FALSE)
+if (isTRUE(parameters$filter_features)) {
+  trajFeatureNames(sce) <- filterTrajFeaturesByDL(sce, threshold = parameters$threshold_dl, show_plot = FALSE)
+  trajFeatureNames(sce) <- filterTrajFeaturesByCOV(sce, threshold = parameters$threshold_cov, show_plot = FALSE)
+  trajFeatureNames(sce) <- filterTrajFeaturesByFF(sce, threshold = parameters$threshold_ff, min_expr = parameters$min_expr, show_plot = FALSE)
 }
 
 # filter cells based on the features
@@ -42,24 +39,23 @@ sce <- sce[,apply(logcounts(sce[trajFeatureNames(sce), ]), 2, sd) > 0]
 
 # dimensionality reduction
 se <- CellTrails::embedSamples(sce)
-d <- CellTrails::findSpectrum(se$eigenvalues, frac = params$frac)
+d <- CellTrails::findSpectrum(se$eigenvalues, frac = parameters$frac)
 CellTrails::latentSpace(sce) <- se$components[, d]
 
 # find states
 CellTrails::states(sce) <- sce %>% CellTrails::findStates(
-  min_size = params$min_size,
-  min_feat = params$min_feat,
-  max_pval = params$max_pval,
-  min_fc = params$min_fc
+  min_size = parameters$min_size,
+  min_feat = parameters$min_feat,
+  max_pval = parameters$max_pval,
+  min_fc = parameters$min_fc
 )
 
 # construct tree
-sce <- CellTrails::connectStates(sce, l = params$l)
+sce <- CellTrails::connectStates(sce, l = parameters$l)
 
 # fit trajectory
 # this object can contain multiple trajectories (= "components"), so we have to extract information for every one of them and combine afterwards
 components <- CellTrails::trajComponents(sce)
-
 
 trajectories <- map(
   seq_along(components),
@@ -74,7 +70,7 @@ trajectories <- map(
 )
 
 
-checkpoints$method_aftermethod <- as.numeric(Sys.time())
+timings$method_aftermethod <- Sys.time()
 
 #   ____________________________________________________________________________
 #   Process cell graph                                                      ####
@@ -113,13 +109,23 @@ cell_graph <- map_dfr(
 
 to_keep <- unique(c(cell_graph$from, cell_graph$to))
 
-output <- lst(
-  cell_ids = to_keep,
-  grouping,
-  dimred,
-  cell_graph,
-  to_keep,
-  timings = checkpoints
-)
+# save output
+output <-
+  wrap_data(
+    cell_ids = cell_ids
+  ) %>%
+  add_dimred(
+    dimred = dimred
+  ) %>%
+  add_grouping(
+    grouping = grouping
+  ) %>%
+  add_cell_graph(
+    cell_graph = cell_graph,
+    to_keep = to_keep
+  )  %>%
+  add_timings(
+    timings = timings
+  )
 
-write_rds(output, "/ti/output/output.rds")
+dyncli::write_output(output, task$output)
